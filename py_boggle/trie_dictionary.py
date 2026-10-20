@@ -30,8 +30,16 @@ class TrieDictionary(BoggleDictionary):
         with open(filename) as wordsfile:
             for line in wordsfile:
                 word = line.strip().lower()
-                # Do something with word here
-        raise NotImplementedError("method load_dictionary") # TODO: implement your code here
+                if not word:
+                    continue
+                node = self.root
+                for ch in word:
+                    child = node.children.get(ch)
+                    if child is None:
+                        child = TrieNode()
+                        node.children[ch] = child
+                    node = child
+                node.is_word = True
 
     def traverse(self, prefix: str) -> Optional[TrieNode]:
         """
@@ -39,14 +47,27 @@ class TrieDictionary(BoggleDictionary):
         If there is ever a missing child node, then returns None.
         Otherwise, returns the TrieNode referenced by `prefix`.
         """
-        raise NotImplementedError("method traverse") # TODO: implement your code here
+        node = self.root
+        for ch in prefix.lower():
+            node = node.children.get(ch)
+            if node is None:
+                return None
+        return node
 
     def is_prefix(self, prefix: str) -> bool:
-        raise NotImplementedError("method is_prefix") # TODO: implement your code here
+        return self.traverse(prefix) is not None
 
     def contains(self, word: str) -> bool:
-        raise NotImplementedError("method contains") # TODO: implement your code here
+        node = self.traverse(word)
+        return node is not None and node.is_word
 
     def __iter__(self) -> typing.Iterator[str]:
-        raise NotImplementedError("method __iter__") # TODO: implement your code here
+        stack = [(self.root, "")]
+        while stack:
+            node, prefix = stack.pop()
+            if node.is_word:
+                yield prefix
+            # push in reverse order so the smallest letter is popped first
+            for ch in sorted(node.children, reverse=True):
+                stack.append((node.children[ch], prefix + ch))
 

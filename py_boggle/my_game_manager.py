@@ -21,6 +21,10 @@ Groupmate 2: TODO
 SHORT = 3
 CUBE_SIDES = 6
 
+DIRECTIONS = [(-1, -1), (-1, 0), (-1, 1),
+              (0, -1),           (0, 1),
+              (1, -1),  (1, 0),  (1, 1)]
+
 class MyGameManager(BoggleGame):
     """Your implementation of `BoggleGame`
     """
@@ -64,6 +68,14 @@ class MyGameManager(BoggleGame):
         """
         return self.board
 
+    def _neighbors(self, r: int, c: int):
+        """Yield the in-bounds cells adjacent (incl. diagonally) to (r, c)."""
+        n = len(self.board)
+        for dr, dc in DIRECTIONS:
+            nr, nc = r + dr, c + dc
+            if 0 <= nr < n and 0 <= nc < n:
+                yield nr, nc
+
     def find_word_in_board(self, word: str) -> Optional[List[Tuple[int, int]]]:
         """Helper method called by add_word()
         Expected behavior:
@@ -72,7 +84,32 @@ class MyGameManager(BoggleGame):
         If `word` is not present on the board, return None.
         """
         word = word.lower()
-        raise NotImplementedError("method find_word_in_board") # TODO: implement your code here
+        if not word:
+            return None
+        n = len(self.board)
+        visited = [[False] * n for _ in range(n)]
+        path: List[Tuple[int, int]] = []
+
+        def dfs(r: int, c: int, i: int) -> bool:
+            # i = index of the letter of `word` that cell (r, c) must match
+            if self.board[r][c] != word[i]:
+                return False
+            visited[r][c] = True
+            path.append((r, c))
+            if i == len(word) - 1:
+                return True
+            for nr, nc in self._neighbors(r, c):
+                if not visited[nr][nc] and dfs(nr, nc, i + 1):
+                    return True
+            visited[r][c] = False
+            path.pop()
+            return False
+
+        for r in range(n):
+            for c in range(n):
+                if dfs(r, c, 0):
+                    return list(path)
+        return None
 
     def add_word(self, word: str) -> int:
         """This method is provided for you, but feel free to change it.
@@ -95,6 +132,9 @@ class MyGameManager(BoggleGame):
         """This method is provided for you, but feel free to change it.
         """
         self.board = [[c.lower() for c in row] for row in board]
+        self.size = len(self.board)
+        self.words = []
+        self.last_added_word = None
 
     def get_score(self) -> int:
         """This method is provided for you, but feel free to change it.
@@ -110,7 +150,16 @@ class MyGameManager(BoggleGame):
         Returns:
             A set containing all words found on the board.
         """
-        raise NotImplementedError("method dictionary_driven_search") # TODO: implement your code here
+        letters = {ch for row in self.board for ch in row}
+        found: Set[str] = set()
+        for word in self.dictionary:
+            if len(word) <= SHORT:
+                continue
+            if not all(ch in letters for ch in word):
+                continue
+            if self.find_word_in_board(word) is not None:
+                found.add(word)
+        return found
 
     def board_driven_search(self) -> Set[str]:
         """Find all words using a board-driven search.
@@ -122,4 +171,23 @@ class MyGameManager(BoggleGame):
         Returns:
             A set containing all words found on the board.
         """
-        raise NotImplementedError("method board_driven_search") # TODO: implement your code here
+        n = len(self.board)
+        found: Set[str] = set()
+        visited = [[False] * n for _ in range(n)]
+
+        def dfs(r: int, c: int, prefix: str) -> None:
+            prefix += self.board[r][c]
+            if not self.dictionary.is_prefix(prefix):
+                return  # dead end
+            if len(prefix) > SHORT and self.dictionary.contains(prefix):
+                found.add(prefix)
+            visited[r][c] = True
+            for nr, nc in self._neighbors(r, c):
+                if not visited[nr][nc]:
+                    dfs(nr, nc, prefix)
+            visited[r][c] = False
+
+        for r in range(n):
+            for c in range(n):
+                dfs(r, c, "")
+        return found

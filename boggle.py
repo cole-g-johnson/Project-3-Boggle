@@ -70,7 +70,7 @@ def run_boggle(args):
                 if w.upper() not in word_list:
                     comp_words.append(w.upper())
                     comp_score += len(w) - 3
-                    print(w, "\t Score: ", comp_score)
+                    print(w, "\t Score: ", len(w) - 3)
             print("Computer total score: ", comp_score)
             if comp_score > mygame.get_score():
                 print("You Lose!")
